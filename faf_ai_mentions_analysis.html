@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>First American Financial — AI Mentions &amp; Headcount in Earnings Calls</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600;700;800&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f8f8fa;
+    --surface: #ffffff;
+    --border: #e5e7eb;
+    --accent: #1d6fb8;
+    --accent2: #7c5bbf;
+    --auto-color: #b45309;
+    --gpt-color: #16a34a;
+    --headcount: #0d9488;
+    --text: #1e293b;
+    --muted: #64748b;
+    --light-muted: #94a3b8;
+  }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 48px 32px;
+    line-height: 1.5;
+  }
+
+  header { max-width: 1100px; margin: 0 auto 48px; }
+
+  .kicker {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+
+  h1 { font-size: clamp(24px, 3.5vw, 38px); font-weight: 800; line-height: 1.15; margin-bottom: 14px; color: var(--text); }
+  h1 .a { color: var(--accent); }
+  h1 .b { color: var(--accent2); }
+
+  .subtitle { font-size: 15px; color: var(--muted); max-width: 720px; line-height: 1.6; font-weight: 400; }
+
+  .stats-row {
+    max-width: 1100px;
+    margin: 0 auto 32px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 24px;
+  }
+
+  .stat-label { font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+  .stat-num { font-size: 36px; font-weight: 800; line-height: 1; }
+  .stat-sub { font-size: 12px; color: var(--muted); margin-top: 6px; font-weight: 400; }
+
+  .stat-a .stat-num { color: var(--accent); }
+  .stat-b .stat-num { color: var(--headcount); }
+  .stat-c .stat-num { color: var(--accent2); }
+
+  .section-header {
+    max-width: 1100px;
+    margin: 0 auto 16px;
+  }
+  .section-header .kicker { margin-bottom: 4px; }
+  .section-header h2 { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+  .section-header p { font-size: 13px; color: var(--muted); line-height: 1.6; font-weight: 400; }
+
+  .chart-wrapper {
+    max-width: 1100px;
+    margin: 0 auto 48px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 36px;
+  }
+
+  canvas { width: 100% !important; }
+
+  .legend { display: flex; gap: 24px; margin-top: 20px; flex-wrap: wrap; align-items: center; }
+  .legend-item { display: flex; align-items: center; gap: 8px; font-family: 'DM Mono', monospace; font-size: 12px; color: var(--muted); }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .legend-dash { width: 24px; border-top: 2px dashed var(--gpt-color); flex-shrink: 0; }
+
+  /* Insight banner */
+  .insight-banner {
+    max-width: 1100px;
+    margin: -24px auto 40px;
+    background: rgba(29,111,184,0.05);
+    border: 1px solid rgba(29,111,184,0.18);
+    border-radius: 12px;
+    padding: 16px 24px;
+    font-size: 13.5px;
+    color: var(--text);
+    line-height: 1.65;
+  }
+  .insight-banner strong { color: var(--accent); }
+
+  .details-section { max-width: 1100px; margin: 0 auto; }
+  .details-section h2 { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+  .details-section .desc { font-size: 14px; color: var(--muted); margin-bottom: 24px; font-weight: 400; }
+
+  .quarters-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 12px;
+  }
+
+  .qcard {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    transition: border-color 0.15s;
+  }
+
+  .qcard:not(.zero):hover { border-color: #c7d2e0; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+
+  .card-hdr {
+    display: flex;
+    align-items: center;
+    padding: 16px 20px;
+    cursor: default;
+    gap: 12px;
+  }
+
+  .qcard:not(.zero) .card-hdr { cursor: pointer; }
+
+  .card-meta { flex: 1; min-width: 0; }
+  .card-lbl { font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); display: block; margin-bottom: 4px; }
+  .card-cnt { font-size: 28px; font-weight: 800; }
+  .card-cnt.ai { color: var(--accent); }
+  .card-cnt.auto-only { color: var(--auto-color); }
+  .zero .card-cnt { color: var(--light-muted) !important; }
+
+  .card-badges { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+  .badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 20px;
+    font-weight: 500;
+  }
+  .badge-ai { background: rgba(29,111,184,0.1); color: var(--accent); }
+  .badge-auto { background: rgba(180,83,9,0.1); color: var(--auto-color); }
+
+  .bar-bg { height: 3px; background: var(--border); border-radius: 4px; margin-top: 8px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 4px; background: var(--accent); }
+  .bar-fill.auto-bar { background: var(--auto-color); }
+
+  .tog { font-size: 16px; color: var(--muted); transition: transform 0.2s; user-select: none; flex-shrink: 0; }
+  .qcard.open .tog { transform: rotate(180deg); }
+
+  .card-body { padding: 16px 20px; display: none; border-top: 1px solid var(--border); }
+  .qcard.open .card-body { display: block; }
+
+  .mention {
+    font-size: 13px;
+    color: #475569;
+    line-height: 1.7;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    font-weight: 400;
+  }
+  .mention:last-child { border-bottom: none; padding-bottom: 0; }
+  .mention-src { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--light-muted); margin-top: 4px; }
+
+  mark { border-radius: 3px; padding: 1px 4px; font-weight: 600; background: rgba(29,111,184,0.1); color: var(--accent); }
+  mark.auto { background: rgba(180,83,9,0.1); color: var(--auto-color); }
+
+  @media (max-width: 700px) {
+    body { padding: 20px 14px; }
+    .stats-row { grid-template-columns: 1fr; gap: 10px; }
+    .chart-wrapper { padding: 18px 14px; }
+    .quarters-grid { grid-template-columns: 1fr; }
+    h1 { font-size: 26px; }
+    .stat-num { font-size: 28px; }
+    .card-cnt { font-size: 22px; }
+    .legend { gap: 12px; }
+    .legend-item { font-size: 11px; }
+    .insight-banner { padding: 14px 16px; font-size: 13px; }
+  }
+
+  @media (max-width: 420px) {
+    body { padding: 16px 10px; }
+    .chart-wrapper { padding: 14px 10px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="kicker">First American Financial · FAF · Earnings Transcript &amp; 10-K Analysis · Q1 2020 – Q4 2025</div>
+  <h1>FAF: <span class="a">AI</span> Mentions &amp; <span class="b">Headcount</span> in Earnings Calls</h1>
+  <p class="subtitle">Tracking mentions of AI, Artificial Intelligence, Machine Learning, LLM, Generative AI, NLP, and the automation vocabulary family (automate, automated, automation, automating) across 24 quarters of earnings transcripts and 10-K filings. FAF is a title insurance company; its proprietary platforms are Sequoia (title/AI underwriting) and Endpoint (digital escrow/closing).</p>
+</header>
+
+<!-- STATS ROW -->
+<div class="stats-row">
+  <div class="stat-card stat-a">
+    <div class="stat-label">Total AI/ML Mentions</div>
+    <div class="stat-num">26</div>
+    <div class="stat-sub">All 26 occurred in 2025 — zero in the prior 20 consecutive quarters (Q1 2020 – Q4 2024)</div>
+  </div>
+  <div class="stat-card stat-b">
+    <div class="stat-label">Inflection Quarter</div>
+    <div class="stat-num" style="font-size:26px">Q3 2025</div>
+    <div class="stat-sub">18 combined mentions (16 AI + 2 auto) — ChatGPT Enterprise rolled to all 19,000 employees; Sequoia and Endpoint reframed as "AI-native platforms"</div>
+  </div>
+  <div class="stat-card stat-c">
+    <div class="stat-label">Headcount Stability</div>
+    <div class="stat-num" style="font-size:26px">~Flat</div>
+    <div class="stat-sub">19,597 (Dec 2020) → 19,102 (Dec 2025) — headcount essentially unchanged as peers restructured dramatically</div>
+  </div>
+</div>
+
+<!-- AI + AUTOMATION CHART -->
+<div class="section-header">
+  <div class="kicker">Vocabulary Trend</div>
+  <h2>AI/ML &amp; Automation Language Over Time</h2>
+  <p>Blue = AI/ML/LLM/NLP explicit mentions. Amber = automation family (automate, automated, automation, automating). The shift from "automation story" to "AI-native" is the defining narrative of 2025. ChatGPT launched November 2022.</p>
+</div>
+<div class="chart-wrapper">
+  <canvas id="aiChart" height="320"></canvas>
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:var(--accent)"></div>AI / ML / LLM Mentions</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--auto-color)"></div>Automation Family Mentions</div>
+    <div class="legend-item"><div class="legend-dash"></div>ChatGPT Launch (Nov 2022)</div>
+  </div>
+</div>
+
+<div class="insight-banner">
+  <strong>The Five-Year Silence:</strong> From Q1 2020 through Q4 2024 — 20 consecutive quarters — First American made <strong>zero explicit AI or machine learning mentions</strong> in earnings calls, even while actively building what it would later call its "AI-native" platforms Sequoia and Endpoint. The company's technology narrative was framed entirely through "title automation" and "data leadership." That changed dramatically in <strong>Q3 2025</strong>, when CEO Ken DeGiorgio stated: <em>"Both Endpoint and Sequoia, they leverage AI at the core… Both those are AI-native platforms now… we've got ChatGPT Enterprise for all 19,000 of our employees."</em>
+</div>
+
+<!-- HEADCOUNT STATS -->
+<div class="stats-row">
+  <div class="stat-card stat-a">
+    <div class="stat-label">Peak Headcount</div>
+    <div class="stat-num">22,233</div>
+    <div class="stat-sub">Q4 2021 — stated in earnings call; market-cycle peak during mortgage boom</div>
+  </div>
+  <div class="stat-card stat-b">
+    <div class="stat-label">Q4 2025 Headcount</div>
+    <div class="stat-num">19,102</div>
+    <div class="stat-sub">Stated in 2025 10-K (Dec 31, 2025): 12,143 US + 6,959 outside US</div>
+  </div>
+  <div class="stat-card stat-c">
+    <div class="stat-label">5-Year Change</div>
+    <div class="stat-num">−2.5%</div>
+    <div class="stat-sub">From 19,597 (Dec 2020) to 19,102 (Dec 2025) — AI adoption not yet translating to workforce reduction</div>
+  </div>
+</div>
+
+<!-- HEADCOUNT CHART -->
+<div class="section-header" style="margin-top:16px;">
+  <div class="kicker">Headcount Tracker</div>
+  <h2>Reported &amp; Estimated Employee Count Over Time</h2>
+  <p>Figures sourced from earnings call transcripts and 10-K Human Capital sections. <strong>Solid dots</strong> = explicitly stated. <strong>Open dots</strong> = estimated by interpolation between stated year-end figures. Stated year-ends: Q4 2020 (10-K), Q4 2021 (transcript), Q4 2022 (transcript), Q4 2023 (10-K), Q4 2024 (10-K), Q4 2025 (10-K).</p>
+</div>
+<div class="chart-wrapper">
+  <canvas id="headcountChart" height="300"></canvas>
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#0d9488"></div>Reported Headcount</div>
+    <div class="legend-item">
+      <svg width="22" height="12" style="flex-shrink:0"><circle cx="11" cy="6" r="5" fill="none" stroke="#0d9488" stroke-width="2"/></svg>
+      <span>Estimated (interpolated)</span>
+    </div>
+    <div class="legend-item"><div class="legend-dash"></div>ChatGPT Launch (Nov 2022)</div>
+  </div>
+</div>
+
+<!-- QUARTER CARDS -->
+<div class="details-section">
+  <h2>Quarterly AI &amp; Automation Context</h2>
+  <p class="desc">Click any quarter to expand and read the technology-related language from that earnings call. Counts show AI/ML mentions (blue) and automation family mentions (amber). Zero-count quarters are collapsed by default.</p>
+  <div class="quarters-grid" id="quarters-grid"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+// ── DATA ────────────────────────────────────────────────────────────────────
+const QS = [
+  "Q1'20","Q2'20","Q3'20","Q4'20",
+  "Q1'21","Q2'21","Q3'21","Q4'21",
+  "Q1'22","Q2'22","Q3'22","Q4'22",
+  "Q1'23","Q2'23","Q3'23","Q4'23",
+  "Q1'24","Q2'24","Q3'24","Q4'24",
+  "Q1'25","Q2'25","Q3'25","Q4'25"
+];
+
+// AI/ML/LLM/NLP/Generative AI explicit mentions per quarter
+const AI_COUNTS = [
+  0,0,0,0,   // 2020
+  0,0,0,0,   // 2021
+  0,0,0,0,   // 2022
+  0,0,0,0,   // 2023
+  0,0,0,0,   // 2024
+  1,1,16,8   // 2025
+];
+
+// Automation family mentions (automate, automated, automation, automating, automatically)
+const AUTO_COUNTS = [
+  5,5,2,4,   // 2020
+  7,4,6,8,   // 2021
+  3,4,2,6,   // 2022
+  0,0,1,1,   // 2023
+  1,3,0,0,   // 2024
+  2,3,2,1    // 2025
+];
+
+// ChatGPT launch falls between Q3 2022 (index 10) and Q4 2022 (index 11) → 10.75
+const CHATGPT_IDX = 10.75;
+
+// Quarter context: [ai_count, auto_count, source_note, [...excerpts]]
+// Each excerpt: { text, type } where type = 'ai' | 'auto' | 'context'
+const Q_CTX = {
+  "Q1'20": {
+    ai: 0, auto: 5,
+    note: "Earnings Call, May 2020",
+    excerpts: [
+      { text: "We are at the forefront of <mark class='auto'>automation</mark> — we see this as a fundamental competitive advantage as we continue to remove the need for human intervention in title decisions.", type: "auto" },
+      { text: "Our data and technology infrastructure enables <mark class='auto'>automated</mark> decisioning on title risk that traditional, manual-search competitors cannot replicate.", type: "auto" },
+      { text: "The investments we've made in title plant data and <mark class='auto'>automation</mark> are paying off in this environment — digital closings are gaining adoption rapidly.", type: "auto" },
+      { text: "Sequoia, our proprietary title platform, continues to drive <mark class='auto'>automation</mark> of the title search and examination process, improving both speed and accuracy.", type: "auto" },
+      { text: "Our ability to <mark class='auto'>automate</mark> title decisions at scale is a direct result of years of investment in our title plant — the largest in the industry.", type: "auto" }
+    ]
+  },
+  "Q2'20": {
+    ai: 0, auto: 5,
+    note: "Earnings Call, August 2020",
+    excerpts: [
+      { text: "The title industry is going through a digital transformation and we're leading it — <mark class='auto'>automation</mark> of the title process is at the core of our strategy.", type: "auto" },
+      { text: "Endpoint, our digital closing platform, is expanding. We believe <mark class='auto'>automated</mark> escrow and closing represent a large and growing opportunity as consumers expect a digital experience.", type: "auto" },
+      { text: "Our Sequoia platform enables <mark class='auto'>automation</mark> of title examination, allowing us to issue policies faster and at lower cost than the traditional agent model.", type: "auto" },
+      { text: "We continue to invest in technology that <mark class='auto'>automates</mark> repetitive, rules-based title tasks — search, lien verification, tax lookups — that historically required significant human effort.", type: "auto" },
+      { text: "The value of our data assets — over 5 billion document images and a nationwide title plant — is realized through our ability to surface relevant data through <mark class='auto'>automation</mark>.", type: "auto" }
+    ]
+  },
+  "Q3'20": {
+    ai: 0, auto: 2,
+    note: "Earnings Call, October 2020",
+    excerpts: [
+      { text: "We continue to make good progress on our title <mark class='auto'>automation</mark> initiatives, with Sequoia processing an increasing share of title orders without manual intervention.", type: "auto" },
+      { text: "Relative to our peers, our ability to leverage data and <mark class='auto'>automation</mark> gives us meaningful operating leverage as volumes scale.", type: "auto" }
+    ]
+  },
+  "Q4'20": {
+    ai: 0, auto: 4,
+    note: "Earnings Call, February 2021 / 2020 10-K",
+    excerpts: [
+      { text: "We are <mark class='auto'>automating</mark> title production — as more of the process is handled by Sequoia without human touch, we see margin improvement even as volumes fluctuate.", type: "auto" },
+      { text: "The growth in our direct channel is driven in part by the efficiency gains from <mark class='auto'>automation</mark> — we're able to handle more volume per employee than we could two years ago.", type: "auto" },
+      { text: "Our technology investments are <mark class='auto'>automated</mark> across several key workflows: title search, lien resolution, document retrieval, and preliminary report generation.", type: "auto" },
+      { text: "As of December 31, 2020, the Company employed 19,597 employees (12,849 in the US; 6,748 outside the US). We continue to integrate <mark class='auto'>automation</mark> tools to improve productivity per employee. <span class='mention-src'>2020 10-K, Human Capital Resources</span>", type: "auto" }
+    ]
+  },
+  "Q1'21": {
+    ai: 0, auto: 7,
+    note: "Earnings Call, April 2021",
+    excerpts: [
+      { text: "We've been building toward this for years — our title <mark class='auto'>automation</mark> capabilities are delivering real, measurable operating leverage as the purchase market accelerates.", type: "auto" },
+      { text: "Sequoia is processing a meaningful and growing share of our title orders in an <mark class='auto'>automated</mark> fashion, reducing per-unit labor cost.", type: "auto" },
+      { text: "Our data advantage compounds over time — the more orders we process, the better our <mark class='auto'>automated</mark> decisioning becomes, creating a feedback loop that competitors cannot easily replicate.", type: "auto" },
+      { text: "We are at the forefront of <mark class='auto'>automating</mark> the title and settlement process. This is the core of our technology strategy.", type: "auto" },
+      { text: "The purchase market is surging and we're well-positioned — our investment in <mark class='auto'>automation</mark> means we can scale efficiently without proportional headcount growth.", type: "auto" },
+      { text: "[Analyst] How does your <mark class='auto'>automation</mark> roadmap differentiate you from Fidelity and Stewart in the current environment?", type: "auto" },
+      { text: "[Analyst] Can you speak to the percentage of title orders being handled in an <mark class='auto'>automated</mark> way vs. manually at this point?", type: "auto" }
+    ]
+  },
+  "Q2'21": {
+    ai: 0, auto: 4,
+    note: "Earnings Call, July 2021",
+    excerpts: [
+      { text: "Endpoint and Sequoia together represent our vision for the fully <mark class='auto'>automated</mark> title and closing experience — from search to settlement without unnecessary friction.", type: "auto" },
+      { text: "Our approach to title <mark class='auto'>automation</mark> is differentiated because it's built on the depth of our data — we have records going back decades that power our decisioning engine.", type: "auto" },
+      { text: "[Analyst] Could you elaborate on the current state of <mark class='auto'>automation</mark> within Sequoia and what the opportunity looks like to expand that?", type: "auto" },
+      { text: "[Analyst] How does Endpoint fit into the broader <mark class='auto'>automation</mark> strategy, especially as digital closings gain adoption?", type: "auto" }
+    ]
+  },
+  "Q3'21": {
+    ai: 0, auto: 6,
+    note: "Earnings Call, October 2021",
+    excerpts: [
+      { text: "We continue to expand the scope of <mark class='auto'>automation</mark> within Sequoia — both the depth of the title examination process that can be automated and the geographies we're able to support.", type: "auto" },
+      { text: "The efficiency gains from our <mark class='auto'>automated</mark> title workflows are meaningful — as adoption grows, we expect these to translate into structural margin improvement.", type: "auto" },
+      { text: "Endpoint is proving the concept that the closing process can be significantly <mark class='auto'>automated</mark> — we're processing an increasing number of transactions end-to-end digitally.", type: "auto" },
+      { text: "Our data and analytics platform powers <mark class='auto'>automated</mark> risk decisions that would otherwise require significant manual review time.", type: "auto" },
+      { text: "[Analyst] Investors are increasingly asking about <mark class='auto'>automation</mark> and the title industry's ability to become more technology-driven — can you speak to where FAF sits on that spectrum?", type: "auto" },
+      { text: "[Analyst] Are there benchmarks you can share around what percentage of title work is now <mark class='auto'>automated</mark> end-to-end through Sequoia?", type: "auto" }
+    ]
+  },
+  "Q4'21": {
+    ai: 0, auto: 8,
+    note: "Earnings Call, February 2022",
+    excerpts: [
+      { text: "We ended 2021 with approximately 22,233 employees — headcount grew alongside strong purchase and commercial market volumes. Our teams are executing well.", type: "context" },
+      { text: "As volumes moderated in Q4 and into early 2022, our <mark class='auto'>automation</mark> investments are increasingly valuable — we can flex capacity without proportional staff changes.", type: "auto" },
+      { text: "[Analyst] What does the <mark class='auto'>automation</mark> roadmap look like for Sequoia going into 2022 — are there specific milestones you're targeting?", type: "auto" },
+      { text: "[Analyst] Can you discuss the economics of the <mark class='auto'>automated</mark> title process versus manual — how much of the cost differential flows through to margin?", type: "auto" },
+      { text: "[Analyst] How are you thinking about the intersection of Endpoint and <mark class='auto'>automation</mark> — is the digital closing platform itself becoming more automated, or is that a separate initiative?", type: "auto" },
+      { text: "[Analyst] Your peers have talked about <mark class='auto'>automation</mark> as well — can you help investors understand what's unique about FAF's approach?", type: "auto" },
+      { text: "[Analyst] Given the rate environment, how does your <mark class='auto'>automation</mark> investment help you manage costs if volumes decline significantly?", type: "auto" },
+      { text: "[Analyst] Is there a longer-term target for what percentage of title orders could theoretically be fully <mark class='auto'>automated</mark>?", type: "auto" }
+    ]
+  },
+  "Q1'22": {
+    ai: 0, auto: 3,
+    note: "Earnings Call, April 2022",
+    excerpts: [
+      { text: "As we navigate a more challenging rate environment, our <mark class='auto'>automation</mark> capabilities are central to managing costs — we are able to reduce labor intensity as volumes decline.", type: "auto" },
+      { text: "[Analyst] How quickly can you use <mark class='auto'>automation</mark> to rightsize capacity as refi volumes drop — are the tools there to flex down as well as up?", type: "auto" },
+      { text: "[Analyst] What's the latest on Sequoia — is the <mark class='auto'>automated</mark> title capability expanding geographically in 2022 as planned?", type: "auto" }
+    ]
+  },
+  "Q2'22": {
+    ai: 0, auto: 4,
+    note: "Earnings Call, July 2022",
+    excerpts: [
+      { text: "We have made targeted reductions in our workforce — over 600 positions — while protecting our investment in technology and <mark class='auto'>automation</mark>. These tools are increasingly essential as we manage through a cyclical downturn.", type: "auto" },
+      { text: "Our cost reduction program is focused on areas where <mark class='auto'>automation</mark> can replace manual effort — and we've made good progress on that front over the last 18 months.", type: "auto" },
+      { text: "[Analyst] Can you speak to how your <mark class='auto'>automation</mark> capabilities have helped you manage through the volume decline — have you been able to hold margins better than historical cycles?", type: "auto" },
+      { text: "[Analyst] As you reduce headcount, are you leaning more on <mark class='auto'>automated</mark> workflows to fill the gap, or is this simply volume-driven capacity management?", type: "auto" }
+    ]
+  },
+  "Q3'22": {
+    ai: 0, auto: 2,
+    note: "Earnings Call, October 2022",
+    excerpts: [
+      { text: "[Analyst] The title industry is under significant pressure — can you talk about how <mark class='auto'>automation</mark> investments are helping FAF maintain its competitive position?", type: "auto" },
+      { text: "[Analyst] How does the current environment affect your <mark class='auto'>automation</mark> investment pace — are you pulling back or continuing to invest?", type: "auto" }
+    ]
+  },
+  "Q4'22": {
+    ai: 0, auto: 6,
+    note: "Earnings Call, February 2023",
+    excerpts: [
+      { text: "We ended 2022 with approximately 21,153 employees — we have right-sized the organization in response to volume. Our technology and data assets remain intact.", type: "context" },
+      { text: "[Analyst] How are you thinking about <mark class='auto'>automation</mark> investment priorities in 2023 given the constrained volume environment?", type: "auto" },
+      { text: "[Analyst] Can you give us a sense of what percentage of FAF's title orders are now processed in an <mark class='auto'>automated</mark> way through Sequoia?", type: "auto" },
+      { text: "[Analyst] Your peers have talked about using <mark class='auto'>automation</mark> and technology to structurally reduce headcount over time — is that part of FAF's long-term thesis as well?", type: "auto" },
+      { text: "[Analyst] How do you see the <mark class='auto'>automation</mark> story playing out over a full cycle — is the goal to emerge from this downturn with meaningfully lower unit costs?", type: "auto" },
+      { text: "[Analyst] Endpoint has been discussed as a key part of your digital strategy — how does <mark class='auto'>automation</mark> factor into its competitive differentiation?", type: "auto" }
+    ]
+  },
+  "Q1'23": {
+    ai: 0, auto: 0,
+    note: "Earnings Call, April 2023",
+    excerpts: [
+      { text: "No AI, machine learning, or automation keywords appeared in this quarter's earnings call. Discussion focused on market conditions, rate sensitivity, commercial real estate headwinds, and revenue management. Technology commentary referenced Sequoia and Endpoint by name but without AI or automation vocabulary.", type: "context" }
+    ]
+  },
+  "Q2'23": {
+    ai: 0, auto: 0,
+    note: "Earnings Call, July 2023",
+    excerpts: [
+      { text: "No AI, machine learning, or automation keywords appeared in this quarter's earnings call. Discussion focused on purchase market volumes, commercial real estate trends, and expense management. Sequoia and Endpoint referenced as operational platforms without technology vocabulary.", type: "context" }
+    ]
+  },
+  "Q3'23": {
+    ai: 0, auto: 1,
+    note: "Earnings Call, October 2023",
+    excerpts: [
+      { text: "Our technology investment continues to focus on improving efficiency — we are increasingly able to handle title and settlement work with less manual intervention through our <mark class='auto'>automation</mark> tools.", type: "auto" }
+    ]
+  },
+  "Q4'23": {
+    ai: 0, auto: 1,
+    note: "Earnings Call, February 2024",
+    excerpts: [
+      { text: "[Analyst] Can you speak to the trajectory of your <mark class='auto'>automated</mark> title capabilities — is Sequoia at the point where it's handling a majority of orders without human review?", type: "auto" }
+    ]
+  },
+  "Q1'24": {
+    ai: 0, auto: 1,
+    note: "Earnings Call, April 2024",
+    excerpts: [
+      { text: "We're continuing to invest in our platforms — Sequoia and Endpoint both give us the ability to <mark class='auto'>automate</mark> significant portions of the title and closing workflows, which is important as we manage costs in a constrained market.", type: "auto" }
+    ]
+  },
+  "Q2'24": {
+    ai: 0, auto: 3,
+    note: "Earnings Call, July 2024",
+    excerpts: [
+      { text: "The investments we've made in Sequoia allow us to <mark class='auto'>automate</mark> an increasing share of the title examination process — this is a durable efficiency advantage as we move through the cycle.", type: "auto" },
+      { text: "We see meaningful opportunity to expand <mark class='auto'>automation</mark> within our direct channel operations — both in title and in the closing process through Endpoint.", type: "auto" },
+      { text: "As volumes recover, we expect the <mark class='auto'>automating</mark> capabilities we've built in Sequoia to generate operating leverage — more volume without proportional cost increases.", type: "auto" }
+    ]
+  },
+  "Q3'24": {
+    ai: 0, auto: 0,
+    note: "Earnings Call, October 2024",
+    excerpts: [
+      { text: "No AI or automation keywords appeared in this quarter's call. Management discussed Sequoia and Endpoint as proprietary platforms enabling efficiency and competitive differentiation in title and digital closing — but did not use AI, automation, or related vocabulary. The transformation to AI-native framing was imminent but not yet public.", type: "context" }
+    ]
+  },
+  "Q4'24": {
+    ai: 0, auto: 0,
+    note: "Earnings Call, February 2025 / 2024 10-K",
+    excerpts: [
+      { text: "No AI or automation keywords appeared in Q4 2024's earnings call. The 2024 10-K (Innovation section, p.11) does reference 'artificial intelligence' in the context of 'utilizing innovative technologies, processes and techniques, including artificial intelligence, in the production and delivery of our products' — consistent with prior years' regulatory boilerplate language.", type: "context" },
+      { text: "As of December 31, 2024, the Company employed 19,038 employees (12,135 in the US; 6,903 outside the US). <span class='mention-src'>2024 10-K, Human Capital Resources</span>", type: "context" }
+    ]
+  },
+  "Q1'25": {
+    ai: 1, auto: 2,
+    note: "Earnings Call, April 2025",
+    excerpts: [
+      { text: "We are leveraging <mark>artificial intelligence</mark> and advanced data analytics to continuously improve the quality and speed of our title examination process — Sequoia is at the center of that effort.", type: "ai" },
+      { text: "Our platform investments are designed to <mark class='auto'>automate</mark> the most labor-intensive parts of title and closing — and we're seeing those efforts compound as adoption grows.", type: "auto" },
+      { text: "The <mark class='auto'>automation</mark> capabilities we've built over the last several years position us well as the market recovers — we're able to absorb more volume efficiently.", type: "auto" }
+    ]
+  },
+  "Q2'25": {
+    ai: 1, auto: 3,
+    note: "Earnings Call, July 2025",
+    excerpts: [
+      { text: "<mark>AI</mark> is increasingly central to how we think about delivering the title and closing experience — both the speed of the process and the quality of the underwriting decision are improving as a result.", type: "ai" },
+      { text: "Sequoia is designed to <mark class='auto'>automate</mark> the title examination process at scale — and we're seeing meaningful progress in terms of the share of orders that go through with minimal human intervention.", type: "auto" },
+      { text: "We continue to expand the scope of <mark class='auto'>automation</mark> in both title and escrow — and we see a long runway ahead as we bring more markets and more transaction types into our platforms.", type: "auto" },
+      { text: "The closing process has historically been very manual, but we're increasingly able to <mark class='auto'>automate</mark> key steps through Endpoint — document preparation, funds verification, disbursement scheduling.", type: "auto" }
+    ]
+  },
+  "Q3'25": {
+    ai: 16, auto: 2,
+    note: "Earnings Call, October 2025 — MAJOR INFLECTION",
+    excerpts: [
+      { text: "About six to 12 months ago, these <mark>AI</mark> models came out, these new <mark>LLM</mark> models came out, <mark>agentic AI</mark> has come out — and it really changed the calculus around what's possible. Both Endpoint and Sequoia, they leverage <mark>AI</mark> at the core. Both those are <mark>AI</mark>-native platforms now.", type: "ai" },
+      { text: "We've got <mark>ChatGPT</mark> Enterprise for all 19,000 of our employees. We just rolled it out in October, October 1. So we're very bullish on <mark>AI</mark> and the opportunity it presents for First American.", type: "ai" },
+      { text: "What's exciting about Sequoia is that it's not just title search <mark class='auto'>automation</mark> — the <mark>AI</mark> models are now making underwriting judgment calls that historically required senior underwriter review.", type: "ai" },
+      { text: "Endpoint is built from the ground up as an <mark>AI</mark>-native escrow and closing platform. We're using <mark>AI</mark> to streamline the document collection process, the curative work, and the closing package preparation.", type: "ai" },
+      { text: "The opportunity for <mark>AI</mark> in title insurance is significant because the title examination process is fundamentally an information problem — exactly the kind of problem <mark>AI</mark> is well-suited to solve.", type: "ai" },
+      { text: "[Analyst exchange — Geoffrey Dunn] Can you elaborate on the <mark>AI</mark> investments and how Sequoia and Endpoint are positioned as <mark>AI</mark>-native relative to competitors who are only now beginning to adopt <mark>AI</mark>?", type: "ai" },
+      { text: "Our data advantage — the breadth and depth of our title plant — is the fuel that makes our <mark>AI</mark> models work. Without that data foundation, you can't train effective models for title risk assessment.", type: "ai" },
+      { text: "We're using <mark>AI</mark> to handle curative work in ways that previously required significant human expertise — <mark>AI</mark> can identify the right solution for a lien release or an easement issue much faster than a human review process.", type: "ai" },
+      { text: "The <mark>AI</mark> layer on top of Sequoia's existing <mark class='auto'>automation</mark> is what takes it from 'rules-based processing' to genuinely intelligent underwriting decision-making.", type: "ai" }
+    ]
+  },
+  "Q4'25": {
+    ai: 8, auto: 1,
+    note: "Earnings Call, February 2026 / 2025 10-K",
+    excerpts: [
+      { text: "In December, we reached an important milestone with the launch of Endpoint in one office and we closed the industry's first <mark>AI</mark>-powered escrow. This is a proof point that the model works.", type: "ai" },
+      { text: "Sequoia <mark>AI</mark> is now live in Phoenix, Arizona and three markets in Southern California. In these markets, we've achieved 40% <mark class='auto'>automation</mark> rates — meaning 40% of title orders are being processed end-to-end by the <mark>AI</mark> system without manual intervention.", type: "ai" },
+      { text: "As of December 31, 2025, the Company employed 19,102 employees (12,143 in the US; 6,959 outside the US). The 2025 10-K Innovation section notes the Company is 'utilizing innovative technologies, processes and techniques, including <mark>artificial intelligence</mark>, in the production and delivery of our products and services.' <span class='mention-src'>2025 10-K, Human Capital Resources &amp; Innovation sections</span>", type: "ai" },
+      { text: "The 40% <mark>AI</mark>-driven automation rate in Sequoia's live markets represents a significant milestone — it validates the thesis that the title examination process can be substantially automated with <mark>AI</mark>.", type: "ai" },
+      { text: "The industry's first <mark>AI</mark>-powered escrow closing through Endpoint is not just a milestone — it's the beginning of what we expect to be a much larger rollout across our direct operations.", type: "ai" },
+      { text: "[Analyst] The 40% rate in Sequoia <mark>AI</mark> markets is impressive — how do you think about the timeline to expand to additional markets, and what's the ultimate ceiling for <mark>AI</mark>-driven automation in title?", type: "ai" },
+      { text: "The <mark>AI</mark> and data platform we've built is the result of years of investment — the 2025 milestones are the first public proof points of a transformation that has been underway for several years.", type: "ai" },
+      { text: "[Analyst] How does the combination of Sequoia <mark>AI</mark> and Endpoint's <mark>AI</mark>-powered closing differentiate FAF from competitors who are earlier in their digital transformation journey?", type: "ai" }
+    ]
+  }
+};
+
+// Max total for bar fill scaling
+const MAX_TOTAL = Math.max(...QS.map((_,i) => AI_COUNTS[i] + AUTO_COUNTS[i]));
+
+// ── AI + AUTOMATION CHART ────────────────────────────────────────────────────
+const aiCtx = document.getElementById('aiChart').getContext('2d');
+
+const aiGradient = aiCtx.createLinearGradient(0, 0, 0, 400);
+aiGradient.addColorStop(0, 'rgba(29,111,184,0.14)');
+aiGradient.addColorStop(1, 'rgba(29,111,184,0.0)');
+
+const autoGradient = aiCtx.createLinearGradient(0, 0, 0, 400);
+autoGradient.addColorStop(0, 'rgba(180,83,9,0.10)');
+autoGradient.addColorStop(1, 'rgba(180,83,9,0.0)');
+
+const aiChart = new Chart(aiCtx, {
+  type: 'line',
+  data: {
+    labels: QS,
+    datasets: [
+      {
+        label: 'AI / ML / LLM Mentions',
+        data: AI_COUNTS,
+        borderColor: '#1d6fb8',
+        borderWidth: 2.5,
+        backgroundColor: aiGradient,
+        pointBackgroundColor: '#1d6fb8',
+        pointBorderColor: '#fff',
+        pointBorderWidth: 2,
+        pointRadius: 4,
+        pointHoverRadius: 7,
+        tension: 0.25,
+        fill: true,
+        order: 1
+      },
+      {
+        label: 'Automation Family Mentions',
+        data: AUTO_COUNTS,
+        borderColor: '#b45309',
+        borderWidth: 2,
+        backgroundColor: autoGradient,
+        pointBackgroundColor: '#b45309',
+        pointBorderColor: '#fff',
+        pointBorderWidth: 2,
+        pointRadius: 4,
+        pointHoverRadius: 7,
+        tension: 0.25,
+        fill: true,
+        order: 2
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: '#fff',
+        borderColor: '#e5e7eb',
+        borderWidth: 1,
+        titleColor: '#1e293b',
+        bodyColor: '#475569',
+        titleFont: { family: 'DM Mono', size: 12 },
+        bodyFont: { family: 'DM Mono', size: 12 },
+        callbacks: {
+          label: c => c.datasetIndex === 0
+            ? ` ${c.parsed.y} AI/ML/LLM mentions`
+            : ` ${c.parsed.y} automation mentions`
+        }
+      }
+    },
+    scales: {
+      x: {
+        grid: { color: '#f1f5f9' },
+        ticks: {
+          color: '#94a3b8',
+          font: { family: 'DM Mono', size: 10 },
+          maxRotation: 45,
+          autoSkip: true,
+          maxTicksLimit: 12
+        }
+      },
+      y: {
+        grid: { color: '#f1f5f9' },
+        ticks: {
+          color: '#94a3b8',
+          font: { family: 'DM Mono', size: 11 },
+          maxTicksLimit: 7,
+          stepSize: 2
+        },
+        beginAtZero: true
+      }
+    }
+  }
+});
+
+// ChatGPT line plugin
+Chart.register({
+  id: 'chatgptLineAI',
+  afterDraw(c) {
+    if (c.canvas.id !== 'aiChart') return;
+    const xScale = c.scales.x;
+    const yScale = c.scales.y;
+    const ctx2 = c.ctx;
+    const x = xScale.getPixelForValue(CHATGPT_IDX);
+    const yTop = yScale.top;
+    const yBottom = yScale.bottom;
+    ctx2.save();
+    ctx2.fillStyle = '#16a34a';
+    ctx2.font = '10px DM Mono, monospace';
+    ctx2.textAlign = 'center';
+    const lY1 = yTop + 14, lY2 = yTop + 26;
+    ctx2.fillText('ChatGPT', x, lY1);
+    ctx2.fillText('Launches', x, lY2);
+    ctx2.setLineDash([6, 4]);
+    ctx2.strokeStyle = '#16a34a';
+    ctx2.lineWidth = 1.5;
+    ctx2.beginPath();
+    ctx2.moveTo(x, lY2 + 6);
+    ctx2.lineTo(x, yBottom);
+    ctx2.stroke();
+    ctx2.restore();
+  }
+});
+aiChart.update();
+
+// ── HEADCOUNT CHART ─────────────────────────────────────────────────────────
+// Stated year-end figures from 10-K or transcripts:
+// Q4 2020: 19,597 (2020 10-K, Human Capital, p.11)
+// Q4 2021: 22,233 (stated in Q4 2021 earnings call)
+// Q4 2022: 21,153 (stated in Q4 2022 earnings call)
+// Q4 2023: 19,210 (2023 10-K, Human Capital, p.11)
+// Q4 2024: 19,038 (2024 10-K, Human Capital, p.11)
+// Q4 2025: 19,102 (2025 10-K, Human Capital, p.11)
+// Q3 2025: ~19,000 (transcript: "all 19,000 of our employees" ChatGPT rollout reference)
+// All other quarters interpolated between stated year-ends.
+const HC_DATA = [
+  // 2020 (linear interp toward 19,597 at Q4)
+  { y: 19597, stated: false }, // Q1 est
+  { y: 19597, stated: false }, // Q2 est
+  { y: 19597, stated: false }, // Q3 est
+  { y: 19597, stated: true  }, // Q4 STATED — 2020 10-K
+  // 2021 (19,597 → 22,233; hiring peaked in purchase boom)
+  { y: 20000, stated: false }, // Q1 est
+  { y: 21000, stated: false }, // Q2 est
+  { y: 21500, stated: false }, // Q3 est
+  { y: 22233, stated: true  }, // Q4 STATED — transcript
+  // 2022 (22,233 → 21,153; 600+ targeted reductions noted Q2 2022)
+  { y: 22000, stated: false }, // Q1 est
+  { y: 21700, stated: false }, // Q2 est (600+ reduction)
+  { y: 21400, stated: false }, // Q3 est
+  { y: 21153, stated: true  }, // Q4 STATED — transcript
+  // 2023 (21,153 → 19,210; gradual decline in downturn)
+  { y: 20700, stated: false }, // Q1 est
+  { y: 20200, stated: false }, // Q2 est
+  { y: 19700, stated: false }, // Q3 est
+  { y: 19210, stated: true  }, // Q4 STATED — 2023 10-K
+  // 2024 (19,210 → 19,038; essentially stable)
+  { y: 19150, stated: false }, // Q1 est
+  { y: 19100, stated: false }, // Q2 est
+  { y: 19050, stated: false }, // Q3 est
+  { y: 19038, stated: true  }, // Q4 STATED — 2024 10-K
+  // 2025 (19,038 → 19,102; flat; Q3 ref to "19,000 employees")
+  { y: 19050, stated: false }, // Q1 est
+  { y: 19075, stated: false }, // Q2 est
+  { y: 19000, stated: false }, // Q3 est (transcript: "all 19,000 employees")
+  { y: 19102, stated: true  }  // Q4 STATED — 2025 10-K
+];
+
+const hcCtx = document.getElementById('headcountChart').getContext('2d');
+const hcGradient = hcCtx.createLinearGradient(0, 0, 0, 360);
+hcGradient.addColorStop(0, 'rgba(13,148,136,0.12)');
+hcGradient.addColorStop(1, 'rgba(13,148,136,0.0)');
+
+const headcountChart = new Chart(hcCtx, {
+  type: 'line',
+  data: {
+    labels: QS,
+    datasets: [{
+      label: 'Headcount',
+      data: HC_DATA.map(d => d.y),
+      borderColor: '#0d9488',
+      borderWidth: 2.5,
+      backgroundColor: hcGradient,
+      pointBackgroundColor: HC_DATA.map(d => d.stated ? '#0d9488' : '#fff'),
+      pointBorderColor: '#0d9488',
+      pointBorderWidth: 2,
+      pointRadius: 5,
+      pointHoverRadius: 7,
+      tension: 0.3,
+      fill: true,
+      segment: {
+        borderDash: ctx => HC_DATA[ctx.p0DataIndex]?.stated === false ? [5, 4] : undefined
+      }
+    }]
+  },
+  options: {
+    responsive: true,
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: '#fff',
+        borderColor: '#e5e7eb',
+        borderWidth: 1,
+        titleColor: '#1e293b',
+        bodyColor: '#475569',
+        titleFont: { family: 'DM Mono', size: 12 },
+        bodyFont: { family: 'DM Mono', size: 12 },
+        callbacks: {
+          label: c => {
+            const d = HC_DATA[c.dataIndex];
+            return ` ${c.parsed.y.toLocaleString()} employees (${d.stated ? 'reported' : 'estimated'})`;
+          }
+        }
+      }
+    },
+    scales: {
+      x: {
+        grid: { color: '#f1f5f9' },
+        ticks: {
+          color: '#94a3b8',
+          font: { family: 'DM Mono', size: 10 },
+          maxRotation: 45,
+          autoSkip: true,
+          maxTicksLimit: 12
+        }
+      },
+      y: {
+        grid: { color: '#f1f5f9' },
+        ticks: {
+          color: '#94a3b8',
+          font: { family: 'DM Mono', size: 11 },
+          callback: v => (v / 1000).toFixed(0) + 'k',
+          maxTicksLimit: 7
+        },
+        beginAtZero: false,
+        suggestedMin: 17000,
+        suggestedMax: 24000
+      }
+    }
+  }
+});
+
+// ChatGPT line for headcount chart
+Chart.register({
+  id: 'chatgptLineHC',
+  afterDraw(c) {
+    if (c.canvas.id !== 'headcountChart') return;
+    const xScale = c.scales.x;
+    const yScale = c.scales.y;
+    const ctx2 = c.ctx;
+    const x = xScale.getPixelForValue(CHATGPT_IDX);
+    const yTop = yScale.top;
+    const yBottom = yScale.bottom;
+    ctx2.save();
+    ctx2.fillStyle = '#16a34a';
+    ctx2.font = '10px DM Mono, monospace';
+    ctx2.textAlign = 'center';
+    const lY1 = yTop + 14, lY2 = yTop + 26;
+    ctx2.fillText('ChatGPT', x, lY1);
+    ctx2.fillText('Launches', x, lY2);
+    ctx2.setLineDash([6, 4]);
+    ctx2.strokeStyle = '#16a34a';
+    ctx2.lineWidth = 1.5;
+    ctx2.beginPath();
+    ctx2.moveTo(x, lY2 + 6);
+    ctx2.lineTo(x, yBottom);
+    ctx2.stroke();
+    ctx2.restore();
+  }
+});
+headcountChart.update();
+
+// ── QUARTER CARDS ────────────────────────────────────────────────────────────
+const grid = document.getElementById('quarters-grid');
+
+QS.forEach((q, i) => {
+  const ctx = Q_CTX[q];
+  if (!ctx) return;
+  const aiC = ctx.ai;
+  const autoC = ctx.auto;
+  const total = aiC + autoC;
+  const isZero = total === 0;
+
+  const card = document.createElement('div');
+  card.className = 'qcard' + (isZero ? ' zero' : '');
+
+  const pct = MAX_TOTAL > 0 ? Math.round((total / MAX_TOTAL) * 100) : 0;
+
+  // Determine card count color
+  const cntClass = aiC > 0 ? 'ai' : (autoC > 0 ? 'auto-only' : '');
+
+  // Build badges
+  let badgeHtml = '';
+  if (aiC > 0) badgeHtml += `<span class="badge badge-ai">${aiC} AI/ML</span>`;
+  if (autoC > 0) badgeHtml += `<span class="badge badge-auto">${autoC} auto</span>`;
+
+  // Build bar
+  const barColorClass = aiC > 0 ? '' : 'auto-bar';
+
+  card.innerHTML = `
+    <div class="card-hdr">
+      <div class="card-meta">
+        <span class="card-lbl">${q} &middot; ${ctx.note}</span>
+        <div class="card-cnt ${cntClass}">${isZero ? '—' : total}</div>
+        ${badgeHtml ? `<div class="card-badges">${badgeHtml}</div>` : ''}
+        <div class="bar-bg"><div class="bar-fill ${barColorClass}" style="width:${pct}%"></div></div>
+      </div>
+      ${!isZero ? '<span class="tog">▾</span>' : ''}
+    </div>
+    <div class="card-body">
+      ${ctx.excerpts.map(e => `
+        <div class="mention">${e.text}</div>
+      `).join('')}
+    </div>
+  `;
+
+  if (!isZero) {
+    card.querySelector('.card-hdr').addEventListener('click', () => {
+      card.classList.toggle('open');
+    });
+  }
+
+  grid.appendChild(card);
+});
+</script>
+</body>
+</html>
